@@ -10,13 +10,14 @@ import java.util.List;
 
 import javax.naming.spi.DirStateFactory.Result;
 
+import net.zeroone.Main;
 import net.zeroone.Model.Painting;
 
 public class PaintingDAO {
 
     Connection conn;
-    public PaintingDAO() {
-        
+
+    public PaintingDAO() {        
         try {
             conn = DriverManager.getConnection("jdbc:h2:./h2/db", "sa", "sa");
             PreparedStatement ps1 = conn.prepareStatement("drop table if exists painting;");
@@ -39,17 +40,22 @@ public class PaintingDAO {
      * @return
      */
     public int savePaintingReturnId(Painting painting) {
-        try {
-            PreparedStatement ps = conn.prepareStatement("insert into painting (id, title, author, year_made) values (?, ?, ?, ?);");
-            ps.setInt(1, painting.getId());
-            ps.setString(2, painting.getTitle());
-            ps.setString(3, painting.getAuthor());
-            ps.setInt(4, painting.getYear());
-            ps.executeUpdate();
-
-        } catch (SQLException e) {            
-            e.printStackTrace();
-        }        
+        Painting paintingExists = getPaintingById(painting.getId());
+        if (paintingExists == null) {
+            try {
+                PreparedStatement ps2 = conn.prepareStatement("insert into painting (id, title, author, year_made) values (?, ?, ?, ?);");
+                ps2.setInt(1, painting.getId());
+                ps2.setString(2, painting.getAuthor());
+                ps2.setString(3, painting.getTitle());
+                ps2.setInt(4, painting.getYear());
+                ps2.executeUpdate();
+                Main.getLogger().info("save a new painting: " + painting);        
+            } catch (SQLException e) {            
+                e.printStackTrace();
+            }   
+        } else {
+            Main.getLogger().info("duplicate primay-key");
+        }
         return painting.getId();
     }
 
@@ -65,7 +71,7 @@ public class PaintingDAO {
             while (rs.next()) {
                 paintings.add(new Painting(rs.getInt("id"), rs.getString("title"), rs.getString("author"), rs.getInt("year_made")));
             } 
-        } catch (SQLException e) {            
+        } catch (SQLException e) {              
             e.printStackTrace();
         }        
         return paintings;
@@ -84,7 +90,9 @@ public class PaintingDAO {
             } else {
                 return null;
             }
-        } catch (SQLException e) {            
+        } catch (SQLException e) {  
+            // Main.getLogger().error("user managed to get a sql exception... check this out", e);                  
+            // Main.getLogger().error("The specified painting does not exist in the database!!!", e);                  
             e.printStackTrace();
         }        
         return null;
